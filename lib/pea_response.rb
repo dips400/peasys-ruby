@@ -225,13 +225,8 @@ class PeaCommandResponse
     # +has_succeeded+:: Boolean set to true if the command has correctly been executed meaning that no CPFxxxx was return. Still, description messages can be return along with CP*xxxx.
     # +warnings+:: List of warnings that results form the command execution. Errors are of the form : CP*xxxx Description of the warning. 
 
-    def initialize(has_succeeded, warnings)
-        @has_succeeded = has_succeeded
+    def initialize(warnings)
         @warnings = warnings
-    end
-
-    def has_succeeded
-        @has_succeeded
     end
 
     def warnings

@@ -321,12 +321,11 @@ class PeaClient
     def execute_command(command)
         data = retrieve_data("exas" + command + @@end_pack)
         description_offset = 112
-        has_succeeded = true
         result = Array.new()
 
         /C[A-Z]{2}[0-9]{4}/.match(data) do |m|
             
-            if !m[0].start_with?("CPI")
+            if !m[0].start_with?("CPI") && m.offset(0)[0] + description_offset < data.length
                 description = data[m.offset(0)[0] + description_offset..(data.length - (m.offset(0)[0] + description_offset))]
                 description = description[0..description.index(".")]
                 description = description.gsub(/[^a-zA-Z0-9 ._'*:-]/, '')
@@ -334,11 +333,8 @@ class PeaClient
 
             result.append(m[0] + " " + description)
 
-            if m[0].start_with?("CPF")
-                has_succeeded = false
-            end
         end
-        return PeaCommandResponse.new(has_succeeded, result)
+        return PeaCommandResponse.new(result)
     end
 
     ##
