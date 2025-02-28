@@ -1,6 +1,6 @@
 Gem::Specification.new do |s|
   s.name        = 'peasys-ruby'
-  s.version     = '1.0.2'
+  s.version     = '1.0.3'
   s.authors     = ['DIPS']
   s.summary     = 'Ruby client for IBM Db2 and peasys service'
   s.description = 'Ruby client for IBM Db2 and peasys service'

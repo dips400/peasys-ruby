@@ -2,6 +2,8 @@ require 'socket'
 require 'json'
 require 'uri'
 require 'net/http'
+require 'peasys-ruby/rails_adapter' if defined?(Rails)
+
 
 class PeaClient
     @@end_pack = "dipsjbiemg"

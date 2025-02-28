@@ -1,0 +1,10 @@
+development:
+  adapter: peasys
+  ip_address: <%= ENV["DB_IP"] %>
+  partition_name: <%= ENV["DB_PARTITION"] %>
+  port: <%= ENV["DB_PORT"] %>
+  username: <%= ENV["DB_USERNAME"] %>
+  password: <%= ENV["DB_PASS"] %>
+  id_client: <%= ENV["DB_IDCLI"] %>
+  online_version: <%= ENV["DB_ONLINE"] %>
+  retrieve_statistics: <%= ENV["DB_STATS"] %>
