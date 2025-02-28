@@ -1,5 +1,8 @@
 require 'active_record/connection_adapters/abstract_adapter'
 require 'peasys-ruby'
+ActiveSupport.on_load(:active_record) do
+  require "active_record/connection_adapters/peasys_adapter"
+end
 
 module ActiveRecord
   module ConnectionHandling
