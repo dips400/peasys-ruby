@@ -1,5 +1,5 @@
 require "active_record/connection_adapters/abstract_adapter"
-require "peasys"
+require "peasys-ruby"
 
 module ActiveRecord
   module ConnectionAdapters
@@ -32,6 +32,14 @@ module ActiveRecord
             config[:retrieve_statistics]
         )
       end
+
+      def active?
+
+        raise
+
+        @client.connected == "Connected"
+      end
+
     end
   end
 end

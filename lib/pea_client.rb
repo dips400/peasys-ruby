@@ -41,6 +41,8 @@ class PeaClient
         @connexion_status = "ds"
         @connexion_message = "ds"
 
+        @pool = nil
+
         token = "xqdsg27010wmca6052009050000000IDSP1tiupozxreybjhlk"
         if online_version
             begin
