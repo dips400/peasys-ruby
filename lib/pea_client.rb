@@ -6,7 +6,66 @@ require 'peasys-ruby/rails_adapter' if defined?(Rails)
 
 
 class PeaClient
+    if defined?(ActiveRecord)
+        attr_accessor :pool
+        attr_accessor :leased
+        attr_accessor :lock_thread
+        attr_accessor :last_used_time
+    end
+    def pool=(value)
+        @pool = value
+    end
+    
+    def pool
+        @pool
+    end
     @@end_pack = "dipsjbiemg"
+
+    def check_version
+        true
+    end
+
+    def lease
+        @leased = true
+    end
+
+    def in_use?
+        @in_use
+    end
+
+    def seconds_idle
+        Time.now - @last_used_time
+    end
+
+    def mark_as_used
+        @in_use = true
+        @last_used_time = Time.now
+    end
+
+    def mark_as_unused
+        @in_use = false
+    end
+
+    def alive?
+        @connexion_message == "Connected"
+    end
+
+    def remove_connection_from_thread_cache(conn, owner_thread = conn.owner)
+        if owner_thread == Thread.current
+          @leased = false
+          @owner = nil
+        end
+    end
+
+    def _run_checkout_callbacks
+        yield if block_given?
+    end
+
+    def clean!
+        @disconnect
+        @leased = false
+        @owner = nil
+    end
 
     ##
     # Initialize a new instance of the PeaClient class. Initiates a connexion with the AS/400 server.
@@ -40,6 +99,10 @@ class PeaClient
         @retrieve_statistics = retrieve_statistics
         @connexion_status = "ds"
         @connexion_message = "ds"
+        @owner = @connexion_message == "Connected"
+        @lock_thread = false
+        @last_used_time = Time.now
+        @in_use = false
 
         @pool = nil
 
@@ -77,6 +140,7 @@ class PeaClient
             when "1"
                 @connexion_message = "Connected"
                 @connexion_status = 1
+                @leased = true
             when "2"
                 @connexion_message = "Unable to set profile, check profile validity."
                 @connexion_status = 2
@@ -344,9 +408,10 @@ class PeaClient
     ##
     # Closes the TCP connexion with the server.
 
-    def disconnect()
+    def disconnect!
         @tcp_client.send("stopdipsjbiemg", 0)
         @tcp_client.close()
+        puts "Disconnected"
     end
 
     def id_client

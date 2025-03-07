@@ -4,6 +4,8 @@ require "peasys-ruby"
 module ActiveRecord
   module ConnectionAdapters
     class PeasysAdapter < AbstractAdapter
+      attr_reader :pool
+      attr_reader :disconnect
       ADAPTER_NAME = "Peasys"
 
       def initialize(connection, logger = nil, config = {})
@@ -18,6 +20,7 @@ module ActiveRecord
             config[:online_version],
             config[:retrieve_statistics]
           )
+        @pool = ActiveRecord::ConnectionAdapters::ConnectionPool.new(self)
       end
 
       def self.new_client(config)
@@ -33,11 +36,17 @@ module ActiveRecord
         )
       end
 
+      def disconnect!
+        @client.disconnect if active?(:disconnect)
+      end
+
       def active?
-
-        raise
-
         @client.connected == "Connected"
+      end
+      
+      def select(sql, name = nil, binds = [])
+        puts "PeasysAdapter#select - Executing: #{sql}"  # Debugging
+        @client.execute_select(sql)
       end
 
     end
