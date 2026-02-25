@@ -1,2 +1,30 @@
-test
+# Bundler
+/.bundle/
+/vendor/bundle/
+
+# Gem build artifacts
+*.gem
+/pkg/
+
+# RDoc / YARD
+/doc/
+/.yardoc/
+
+# Test artifacts
+/coverage/
+/tmp/
+
+# IDE / Editor
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Environment
 .env
+.envrc
+
+# Lock file (gem development - not committed)
+# Gemfile.lock

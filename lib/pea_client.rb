@@ -2,7 +2,6 @@ require 'socket'
 require 'json'
 require 'uri'
 require 'net/http'
-require 'peasys-ruby/rails_adapter' if defined?(Rails)
 
 
 class PeaClient
@@ -121,8 +120,8 @@ class PeaClient
         if query.empty?
             raise PeaInvalidSyntaxQueryError.new("Query should not be either null or empty")
         end
-        if !query.upcase.start_with?("SELECT")
-            raise PeaInvalidSyntaxQueryError.new("Query should start with the SELECT SQL keyword")
+        if !query.upcase.start_with?("SELECT") && !query.upcase.start_with?("WITH")
+            raise PeaInvalidSyntaxQueryError.new("Query should start with the SELECT or WITH SQL keyword")
         end
 
         result, list_name, nb_row, sql_state, sql_message = build_data(query)
@@ -343,8 +342,11 @@ class PeaClient
     # Closes the TCP connexion with the server.
 
     def disconnect()
+        return if @tcp_client.nil? || @tcp_client.closed?
         @tcp_client.send("stopdipsjbiemg", 0)
         @tcp_client.close()
+    rescue IOError
+        # Socket already closed, ignore
     end
 
     def id_client

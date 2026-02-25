@@ -1,0 +1,203 @@
+# Peasys Ruby
+
+ActiveRecord adapter for IBM Db2 on IBM i (AS/400) via the [Peasys](https://dips400.com) middleware service.
+
+This gem provides both a low-level TCP client (`PeaClient`) and a full ActiveRecord adapter, enabling standard Rails conventions (migrations, models, CRUD) against DB2 on IBM i.
+
+## Requirements
+
+- Ruby >= 3.1
+- Rails >= 7.2, < 8.0
+- A running Peasys service on your IBM i partition
+- A valid Peasys license key
+
+## Installation
+
+Add to your Gemfile:
+
+```ruby
+gem 'peasys-ruby', '~> 2.0'
+```
+
+Then run:
+
+```sh
+bundle install
+```
+
+## Configuration
+
+### database.yml
+
+```yaml
+default: &default
+  adapter: peasys
+  ip_address: 192.168.1.100
+  partition_name: MY_PARTITION
+  port: 3000
+  username: MYUSER
+  password: <%= ENV['DB2_PASSWORD'] %>
+  id_client: MY_CLIENT_ID
+  schema: MYLIB
+  online_version: true
+  retrieve_statistics: false
+
+development:
+  <<: *default
+
+test:
+  <<: *default
+  schema: TESTLIB
+
+production:
+  <<: *default
+  schema: PRODLIB
+```
+
+### Configuration options
+
+| Option | Type | Default | Description |
+|---|---|---|---|
+| `ip_address` | String | *required* | IP address or hostname of the IBM i |
+| `partition_name` | String | *required* | IBM i partition name |
+| `port` | Integer | *required* | Peasys service port |
+| `username` | String | *required* | IBM i user profile |
+| `password` | String | *required* | IBM i password |
+| `id_client` | String | *required* | Peasys client ID (license) |
+| `schema` | String | username | Default library/schema for SQL operations |
+| `online_version` | Boolean | `true` | Use online version of Peasys |
+| `retrieve_statistics` | Boolean | `false` | Retrieve query statistics |
+
+## Usage
+
+### With Rails (ActiveRecord)
+
+Once configured, use standard Rails conventions:
+
+```ruby
+# Migrations
+class CreateUsers < ActiveRecord::Migration[7.2]
+  def change
+    create_table :users do |t|
+      t.string :name, limit: 50
+      t.string :email
+      t.boolean :active, default: true
+      t.timestamps
+    end
+
+    add_index :users, :email, unique: true
+  end
+end
+
+# Models
+class User < ApplicationRecord
+  validates :email, uniqueness: true
+end
+
+# CRUD
+User.create(name: "Alice", email: "alice@example.com")
+User.where(active: true).order(:name)
+User.find_by(email: "alice@example.com")
+```
+
+### Standalone (PeaClient)
+
+Use the TCP client directly without Rails:
+
+```ruby
+require "peasys-ruby"
+
+conn = PeaClient.new("192.168.1.100", "PARTITION", 3000, "USER", "PASS", "CLIENT_ID", true, false)
+puts conn.connexion_message
+
+# SELECT
+response = conn.execute_select("SELECT * FROM MYLIB.USERS")
+puts response.result  # => { "NAME" => ["Alice", "Bob"], "EMAIL" => ["a@b.com", "b@c.com"] }
+
+# INSERT
+conn.execute_insert("INSERT INTO MYLIB.USERS (NAME) VALUES ('Charlie')")
+
+# WITH (CTE) support
+response = conn.execute_select("WITH active AS (SELECT * FROM USERS WHERE ACTIVE = 1) SELECT * FROM active")
+
+conn.disconnect
+```
+
+## Supported Features
+
+### ActiveRecord Adapter
+
+- **Migrations**: `create_table`, `drop_table`, `rename_table`, `add_column`, `remove_column`, `change_column`, `rename_column`, `add_index`, `remove_index`
+- **Schema introspection**: `tables`, `views`, `columns`, `primary_keys`, `indexes`, `foreign_keys`
+- **Schema dump**: `rails db:schema:dump` generates a `schema.rb` compatible with DB2
+- **Transactions**: `COMMIT` / `ROLLBACK` (DB2 implicit transactions)
+- **Quoting**: Proper DB2 quoting (uppercase identifiers, single-quote escaping)
+- **Type mapping**: VARCHAR, CLOB, INTEGER, SMALLINT, BIGINT, DECIMAL, DOUBLE, TIMESTAMP, DATE, TIME, BLOB
+- **Boolean handling**: Mapped to SMALLINT (1/0)
+- **Common Table Expressions**: `WITH` clauses supported
+- **Foreign keys**: Full support with cascade/nullify/restrict actions
+- **Check constraints**: Supported
+- **Views**: Query and introspection supported
+- **Index sort order**: ASC/DESC supported
+
+### DB2 SQL Dialect
+
+The Arel visitor generates DB2-compatible SQL:
+- `LIMIT` becomes `FETCH FIRST n ROWS ONLY`
+- `OFFSET` becomes `OFFSET n ROWS`
+- Locking uses `FOR UPDATE WITH RS`
+- Booleans use `1` / `0`
+
+### Not Yet Supported
+
+- Prepared statements (bind parameters are substituted inline)
+- `INSERT ... RETURNING` (DB2 on IBM i limitation)
+- Savepoints
+- DDL transactions
+- `INSERT ON DUPLICATE` (skip/update)
+- `EXPLAIN` plans
+
+## Type Mapping
+
+| Ruby/Rails Type | DB2 Type | Notes |
+|---|---|---|
+| `:string` | `VARCHAR(255)` | Configurable limit |
+| `:text` | `CLOB` | |
+| `:integer` | `INTEGER` | limit 1-2: SMALLINT, 5-8: BIGINT |
+| `:bigint` | `BIGINT` | |
+| `:float` | `DOUBLE` | |
+| `:decimal` | `DECIMAL` | Configurable precision/scale |
+| `:datetime` | `TIMESTAMP` | |
+| `:date` | `DATE` | |
+| `:time` | `TIME` | |
+| `:binary` | `BLOB` | |
+| `:boolean` | `SMALLINT` | 1 = true, 0 = false |
+| `:json` | `CLOB` | Stored as text |
+| `:primary_key` | `INTEGER GENERATED BY DEFAULT AS IDENTITY NOT NULL PRIMARY KEY` | |
+
+## Schema Introspection
+
+All schema introspection queries use the `QSYS2` catalog views specific to IBM i:
+- `QSYS2.SYSTABLES` for tables and views
+- `QSYS2.SYSCOLUMNS` for column definitions
+- `QSYS2.SYSKEYCST` / `QSYS2.SYSCST` for primary keys and constraints
+- `QSYS2.SYSINDEXES` / `QSYS2.SYSKEYS` for indexes
+- `QSYS2.SYSREFCST` for foreign keys
+
+## Development
+
+```sh
+git clone https://github.com/dips400/peasys-ruby.git
+cd peasys-ruby
+bundle install
+bundle exec rake test
+```
+
+## License
+
+MIT License. See the LICENSE file for details.
+
+## Support
+
+- Documentation: [https://dips400.com/docs](https://dips400.com/docs)
+- Issues: [https://github.com/dips400/peasys-ruby/issues](https://github.com/dips400/peasys-ruby/issues)
